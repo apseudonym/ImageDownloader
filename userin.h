@@ -5,3 +5,5 @@ struct uri {
 };
 
 struct uri* getURI(char* input); 
+
+void freeURI(struct uri*);

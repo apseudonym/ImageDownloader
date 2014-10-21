@@ -7,9 +7,9 @@ char* getRequest(const char* input, const char* domain) {
 	memset(msg, 0, (sizeof msg));
 	msg = strcat(msg, "GET ");
 	msg = strcat(msg, input);
-	msg = strcat(msg, " HTTP/1.1\n");
+	msg = strcat(msg, " HTTP/1.1\r\n");
 	msg = strcat(msg, "Host: ");
 	msg = strcat(msg, domain); 
-	msg = strcat(msg, "\n");
+	msg = strcat(msg, "\r\n\r\n");
 	return msg;
 }

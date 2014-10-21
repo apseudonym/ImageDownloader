@@ -15,7 +15,7 @@ int main(int argc, char *argv[]){
 	int bytes_received;
 	struct addrinfo hints;
 	struct addrinfo *res, *p;
-	struct uri *test;
+	struct uri *input;
 
 	memset(&hints, 0, sizeof hints); // make sure the struct is empty
 	hints.ai_family = AF_UNSPEC;     // don't care IPv4 or IPv6
@@ -26,8 +26,8 @@ int main(int argc, char *argv[]){
 		return 0;
 	}
 
-	test = getURI(argv[1]);
-	if(getaddrinfo(test->domain, test->prefix, &hints, &res)){
+	input = getURI(argv[1]);
+	if(getaddrinfo(input->domain, input->prefix, &hints, &res)){
 		printf("Error with getaddrinfo");
 	}
 	
@@ -51,16 +51,20 @@ int main(int argc, char *argv[]){
 
 	printf("Connected\n\n");
 
-	char* message = getRequest(test->path, test->domain);
+	char* message = getRequest(input->path, input->domain);
+	freeURI(input);
 	bytes_sent = send(descriptor, message, (sizeof(char) * strlen(message)), 0); 
 	printf("%s\n", message);
 	printf("%d bytes sent out of %d\n", bytes_sent, (int)(sizeof(char) * strlen(message)));
+	free(message);
 
 	void* receive = malloc((sizeof(int) * 100000000000));
 	if ((bytes_received = recv(descriptor, receive, 3000, 0)) == -1) {
-		printf("Error");
+		printf("Error\n");
 	}
-	printf("%d bytes received.\nReceived: %s\n",bytes_received, (char*)receive);
+	else
+		printf("%d bytes received.\nReceived: %s\n",bytes_received, (char*)receive);
+	free(receive);
 
 	return 0;
 }
