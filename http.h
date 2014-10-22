@@ -1,1 +1,1 @@
-char* getRequest(const char* input, const char* domain);
+char* getrequest(const char* input, const char* domain);

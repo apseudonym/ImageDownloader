@@ -1,5 +1,6 @@
 #include<stdlib.h>
 #include<stdio.h>
+#include<string.h>
 
 #include"userin.h"
 
@@ -7,11 +8,10 @@ struct uri* getURI(char* input) {
 
 	char *temp, *start, *p;
 	struct uri *output = malloc(sizeof (struct uri));
-//	printf("Full Input: %s\n",input);
 	p = input;
 
 	// Pulls the prefix
-	start = temp = malloc(sizeof p);
+	start = temp = malloc(sizeof(char) * strlen(input));
 	while(*p != ':'){
 		*temp = *p;
 		p++;
@@ -23,8 +23,7 @@ struct uri* getURI(char* input) {
 	p += 3; // Skips the 3 characters before the domain starts in the input
 
 	// Pulls the main domain
-	temp = malloc(sizeof p);
-	start = temp;
+	start = temp = malloc(sizeof(char) * strlen(input));
 	while(*p != '/'){
 		*temp = *p;
 		temp++;
@@ -34,8 +33,7 @@ struct uri* getURI(char* input) {
 	output->domain = start;
 
 	// Pulls the specific path
-	temp = malloc(sizeof p);
-	start = temp;
+	start = temp = malloc(sizeof(char) * strlen(input));
 	while(*p){
 		*temp = *p;
 		temp++;
@@ -51,5 +49,6 @@ void freeURI(struct uri* uri){
 	free(uri->prefix);
 	free(uri->domain);
 	free(uri->path);
+	free(uri);
 }
 

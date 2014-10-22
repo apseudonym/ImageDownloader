@@ -9,6 +9,8 @@
 #include "userin.h"
 #include "http.h"
 
+#define MAXBUFFER 1000
+
 int main(int argc, char *argv[]){
 	int descriptor;
 	int bytes_sent;
@@ -16,6 +18,8 @@ int main(int argc, char *argv[]){
 	struct addrinfo hints;
 	struct addrinfo *res, *p;
 	struct uri *input;
+
+	char receive[MAXBUFFER];
 
 	memset(&hints, 0, sizeof hints); // make sure the struct is empty
 	hints.ai_family = AF_UNSPEC;     // don't care IPv4 or IPv6
@@ -51,20 +55,40 @@ int main(int argc, char *argv[]){
 
 	printf("Connected\n\n");
 
-	char* message = getRequest(input->path, input->domain);
-	freeURI(input);
-	bytes_sent = send(descriptor, message, (sizeof(char) * strlen(message)), 0); 
-	printf("%s\n", message);
-	printf("%d bytes sent out of %d\n", bytes_sent, (int)(sizeof(char) * strlen(message)));
+	char* message = getrequest(input->path, input->domain); // Generates the HTTP request
+	freeURI(input); // At this point, the user's initial input is no longer needed
+
+	if ((bytes_sent = send(descriptor, message,
+			(sizeof(char) * strlen(message)), 0)) != -1) {
+		printf("%s\n", message);
+		printf("%d bytes sent out of %d\n", bytes_sent,
+			   	(int)(sizeof(char) * strlen(message)));
+	}
 	free(message);
 
-	void* receive = malloc((sizeof(int) * 100000000000));
-	if ((bytes_received = recv(descriptor, receive, 3000, 0)) == -1) {
+	char* page = NULL; // Will contain the whole page
+	int totalbytes = 0;
+	int bytectr = 0;
+	int i;
+	
+	while ((bytes_received = recv(descriptor, receive, MAXBUFFER, 0)) != 0) { // Check for the errors or the end of the message
+		page = realloc(page, sizeof(char) * (totalbytes += bytes_received + 1));
+		totalbytes += bytes_received;
+		printf("%d bytes received\n", bytes_received);
+		for (i = 0; i < bytes_received; i++) {
+			*(page + bytectr) = receive[i];
+			bytectr++;
+		}
+	}
+	*(page + bytectr) = 0; // Adds a null terminating character
+	if (bytes_received == -1) {
 		printf("Error\n");
 	}
-	else
-		printf("%d bytes received.\nReceived: %s\n",bytes_received, (char*)receive);
-	free(receive);
+	else {
+		printf("Bytes received: %d\n", totalbytes);
+		printf("%s\n",page);
+		free(page);
+	}
 
 	return 0;
 }
