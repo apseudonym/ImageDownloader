@@ -68,18 +68,17 @@ int main(int argc, char *argv[]){
 
 	char* page = NULL; // Will contain the whole page
 	int totalbytes = 0;
-	int bytectr = 0;
-	int i;
+	int size;
 	
-	while ((bytes_received = recv(descriptor, receive, MAXBUFFER, 0)) != 0) { // Check for the errors or the end of the message
-		page = realloc(page, sizeof(char) * (totalbytes += bytes_received + 1));
+	bytes_received = recv(descriptor, receive, MAXBUFFER, 0);
+	totalbytes += bytes_received;
+	
+	while ((size = processresponse(page, receive, totalbytes, bytes_received) != 0)){  // Check for the errors or the end of the message
 		totalbytes += bytes_received;
-		printf("%d bytes received\n", bytes_received);
-		for (i = 0; i < bytes_received; i++) {
-			*(page + bytectr) = receive[i];
-			bytectr++;
-		}
+		bytes_received = recv(descriptor, receive, size, 0);
 	}
+
+	
 	*(page + bytectr) = 0; // Adds a null terminating character
 	if (bytes_received == -1) {
 		printf("Error\n");
