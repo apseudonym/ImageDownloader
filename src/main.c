@@ -12,9 +12,12 @@
 #define MAXBUFFER 1000
 
 int main(int argc, char *argv[]){
+
 	int descriptor;
 	int bytes_sent;
 	int bytes_received;
+	int totalbytes;
+
 	struct addrinfo hints;
 	struct addrinfo *res, *p;
 	struct uri *input;
@@ -55,8 +58,7 @@ int main(int argc, char *argv[]){
 
 	printf("Connected\n\n");
 
-	char* message = getrequest(input->path, input->domain); // Generates the HTTP request
-	freeURI(input); // At this point, the user's initial input is no longer needed
+	char* message = genrequest(input->path, input->domain, GET); // Generates a GET request
 
 	if ((bytes_sent = send(descriptor, message,
 			(sizeof(char) * strlen(message)), 0)) != -1) {
@@ -66,20 +68,38 @@ int main(int argc, char *argv[]){
 	}
 	free(message);
 
-	char* page = NULL; // Will contain the whole page
-	int totalbytes = 0;
-	int size;
+	char* page = NULL; // Will contain the HTTP responses
 	
-	bytes_received = recv(descriptor, receive, MAXBUFFER, 0);
-	totalbytes += bytes_received;
+	totalbytes = bytes_received = recv(descriptor, receive, MAXBUFFER, 0);
+	printf("%d Bytes received", totalbytes);
+	printf("%s", receive);
 	
-	while ((size = processresponse(page, receive, totalbytes, bytes_received) != 0)){  // Check for the errors or the end of the message
-		totalbytes += bytes_received;
-		bytes_received = recv(descriptor, receive, size, 0);
+	// If the page provides the length, follow this path
+	if (parsehead(receive)) {
+		totalbytes = parsehead(receive);
+		page = malloc(sizeof(char) * totalbytes); // Set the page to the size of the full page
+		memset(page, 0, totalbytes); 
+		do {
+			strcat(page, receive);
+			bytes_received += recv(descriptor, receive, MAXBUFFER, 0);
+		}
+		while (bytes_received < totalbytes);
+	}
+	
+	// If the content has a chunked length, then the code follows this path
+	else {
+		int i;
+		while (processchunked(receive)){  // Check for the errors or the end of the message
+			page = realloc(page, sizeof(char) * totalbytes);
+			for (i = 0; i < strlen(receive) + 1; i++) {
+				page[i] = receive[i];
+			}
+			bytes_received = recv(descriptor, receive, MAXBUFFER, 0);
+			totalbytes += bytes_received;
+		}
 	}
 
 	
-	*(page + bytectr) = 0; // Adds a null terminating character
 	if (bytes_received == -1) {
 		printf("Error\n");
 	}
@@ -89,5 +109,6 @@ int main(int argc, char *argv[]){
 		free(page);
 	}
 
+	freeURI(input); 
 	return 0;
 }
