@@ -13,16 +13,19 @@
 
 int main(int argc, char *argv[]){
 
+	int bytectr = 0;
 	int descriptor;
 	int bytes_sent;
 	int bytes_received;
 	int totalbytes;
+	int i;
 
 	struct addrinfo hints;
 	struct addrinfo *res, *p;
 	struct uri *input;
 
 	char receive[MAXBUFFER];
+	char* page = NULL; // Will contain the HTTP responses
 
 	memset(&hints, 0, sizeof hints); // make sure the struct is empty
 	hints.ai_family = AF_UNSPEC;     // don't care IPv4 or IPv6
@@ -68,43 +71,50 @@ int main(int argc, char *argv[]){
 	}
 	free(message);
 
-	char* page = NULL; // Will contain the HTTP responses
 	
-	totalbytes = bytes_received = recv(descriptor, receive, MAXBUFFER, 0);
-	printf("%d Bytes received", totalbytes);
-	printf("%s", receive);
+	bytes_received = recv(descriptor, receive, MAXBUFFER, 0);
+	printf("%d Bytes received\n", bytes_received);
+
 	
 	// If the page provides the length, follow this path
-	if (parsehead(receive)) {
-		totalbytes = parsehead(receive);
+	if ((totalbytes = parsehead(receive, bytes_received)) != 0) {
 		page = malloc(sizeof(char) * totalbytes); // Set the page to the size of the full page
 		memset(page, 0, totalbytes); 
-		do {
-			strcat(page, receive);
-			bytes_received += recv(descriptor, receive, MAXBUFFER, 0);
+		while (bytes_received + bytectr < totalbytes) {
+			for (i = 0; i < bytes_received; i++) {
+				page[i + bytectr] = receive[i];
+			}
+		bytectr += bytes_received;
+		bytes_received = recv(descriptor, receive, MAXBUFFER, 0);
 		}
-		while (bytes_received < totalbytes);
 	}
 	
 	// If the content has a chunked length, then the code follows this path
 	else {
-		int i;
-		while (processchunked(receive)){  // Check for the errors or the end of the message
-			page = realloc(page, sizeof(char) * totalbytes);
-			for (i = 0; i < strlen(receive) + 1; i++) {
-				page[i] = receive[i];
+		totalbytes = bytes_received;
+		while (processchunked(receive, bytes_received)){  // Check for the errors or the end of the message
+			page = realloc(page, sizeof(char) * (totalbytes + 1));
+			for (i = 0; i < bytes_received + 1; i++) {
+				page[i + bytectr] = receive[i];
 			}
+			bytectr += bytes_received;
 			bytes_received = recv(descriptor, receive, MAXBUFFER, 0);
+			printf("%d bytes received\n", bytes_received);
 			totalbytes += bytes_received;
+			printf("%d total bytes\n", totalbytes);
+		}
+		page = realloc(page, sizeof(char) * (totalbytes + 1));
+		for (i = 0; i < bytes_received + 1; i++) {
+			page[i + bytectr] = receive[i];
 		}
 	}
-
+	page[totalbytes] = 0;
 	
 	if (bytes_received == -1) {
 		printf("Error\n");
 	}
 	else {
-		printf("Bytes received: %d\n", totalbytes);
+	 	printf("Bytes received: %d\n", totalbytes);
 		printf("%s\n",page);
 		free(page);
 	}
