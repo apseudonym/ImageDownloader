@@ -5,7 +5,7 @@ OBJS = ./src/*.c
 CC = gcc
 
 # Flags
-COMPILER_FLAGS = -Wall -g
+COMPILER_FLAGS = -Wall
 
 # Executable Path
 OBJ_PATH = ./bin/
